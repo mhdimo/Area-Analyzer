@@ -48,8 +48,6 @@ def find_peak_near_extremes(values, min_val, max_val, threshold_percentage=5):
 
 def analyze_data(
     data: list[tuple[int, int]],
-    screen_width_px: int,
-    screen_height_px: int,
     tablet_width_mm: int,
     tablet_height_mm: int,
     innergameplay_width_px: int,
