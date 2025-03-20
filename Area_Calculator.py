@@ -1,40 +1,27 @@
 import time
-import json
+from typing import Annotated, NoReturn
 import numpy as np
 from pynput.mouse import Listener
+import typer
 
-# Get user screen resolution
-SCREEN_WIDTH_PX = int(input("Enter your screen width in pixels: "))
-SCREEN_HEIGHT_PX = int(input("Enter your screen height in pixels: "))
+SAMPLE_RATE = 0.01
+data: list[tuple[int, int]] = []
 
-# Inner gameplay is proportional to 1152x864 on a 1920x1080 screen
-INNERGAMEPLAY_WIDTH_PX = int((1152 / 1920) * SCREEN_WIDTH_PX)
-INNERGAMEPLAY_HEIGHT_PX = int((864 / 1080) * SCREEN_HEIGHT_PX)
 
-# Get tablet dimensions
-TABLET_WIDTH_MM = int(input("Enter your full active tablet area width in mm: "))
-TABLET_HEIGHT_MM = int(input("Enter your full active tablet area height in mm: "))
-
-data = []
-
-def on_move(x, y):
+def on_move(x: int, y: int) -> NoReturn:
     """Records mouse movements"""
     data.append((x, y))
 
-def record_movements(duration):
+
+def record_movements(duration: int) -> NoReturn:
     """Records mouse movements for the given duration"""
-    with Listener(on_move=on_move) as listener:
+    with Listener(on_move=on_move):
         print(f"Recording started for {duration} seconds...")
-        start_time = time.time()
-        while time.time() - start_time < duration:
-            time.sleep(0.01)  # Sampling every 10ms
-        listener.stop()
-    
-    with open("mouse_data.json", "w") as f:
-        json.dump(data, f)
-    
-    print("Recording completed. Data saved in 'mouse_data.json'.")
-    return data
+        # Sampling every 10ms
+        start_time = time.perf_counter()
+        while time.perf_counter() - start_time < duration:
+            time.sleep(SAMPLE_RATE)
+
 
 def find_peak_near_extremes(values, min_val, max_val, threshold_percentage=5):
     """Finds the most used point near the detected min/max values"""
@@ -58,46 +45,99 @@ def find_peak_near_extremes(values, min_val, max_val, threshold_percentage=5):
 
     return min_peak, max_peak
 
-def analyze_data(data):
+
+def analyze_data(
+    data: list[tuple[int, int]],
+    screen_width_px: int,
+    screen_height_px: int,
+    tablet_width_mm: int,
+    tablet_height_mm: int,
+    innergameplay_width_px: int,
+    innergameplay_height_px: int,
+):
     """Analyzes the movement data and finds dimensions & peak points"""
-    x_values = np.array([point[0] for point in data])
-    y_values = np.array([point[1] for point in data])
-    
+    x_values = np.array([point[0] for point in data], dtype=np.uint16)
+    y_values = np.array([point[1] for point in data], dtype=np.uint16)
+
     # Remove soft outliers (0.01 - 99.99 percentiles)
     x_1, x_99 = np.percentile(x_values, [0.01, 99.99])
     y_1, y_99 = np.percentile(y_values, [0.01, 99.99])
-    
+
     width_px_filtered = x_99 - x_1
     height_px_filtered = y_99 - y_1
 
     # Convert to mm
-    width_mmC_filtered = (width_px_filtered * TABLET_WIDTH_MM) / INNERGAMEPLAY_WIDTH_PX
-    height_mmC_filtered = (height_px_filtered * TABLET_HEIGHT_MM) / INNERGAMEPLAY_HEIGHT_PX
+    width_mmC_filtered = (width_px_filtered * tablet_width_mm) / innergameplay_width_px
+    height_mmC_filtered = (
+        height_px_filtered * tablet_height_mm
+    ) / innergameplay_height_px
 
     # Find peak usage near the filtered extremes
     x_min_peak, x_max_peak = find_peak_near_extremes(x_values, x_1, x_99)
     y_min_peak, y_max_peak = find_peak_near_extremes(y_values, y_1, y_99)
 
-    # Convert to mm
-    x_min_peak_mm = (x_min_peak * TABLET_WIDTH_MM) / SCREEN_WIDTH_PX
-    x_max_peak_mm = (x_max_peak * TABLET_WIDTH_MM) / SCREEN_WIDTH_PX
-    y_min_peak_mm = (y_min_peak * TABLET_HEIGHT_MM) / SCREEN_HEIGHT_PX
-    y_max_peak_mm = (y_max_peak * TABLET_HEIGHT_MM) / SCREEN_HEIGHT_PX
-
     x_distance_px = x_max_peak - x_min_peak
     y_distance_px = y_max_peak - y_min_peak
-    x_distance_mm = (x_distance_px * TABLET_WIDTH_MM) / INNERGAMEPLAY_WIDTH_PX
-    y_distance_mm = (y_distance_px * TABLET_HEIGHT_MM) / INNERGAMEPLAY_HEIGHT_PX
+    x_distance_mm = (x_distance_px * tablet_width_mm) / innergameplay_width_px
+    y_distance_mm = (y_distance_px * tablet_height_mm) / innergameplay_height_px
 
-    print("\n==== RESULTS ====")
-    print(f"Max used area converted with inner gameplay (removed soft outliers): {width_mmC_filtered:.2f} x {height_mmC_filtered:.2f} mm")
-    print(f"Area calculated with most used points near extremes (removed soft outliers): {x_distance_mm:.2f} x {y_distance_mm:.2f} mm")
+    typer.echo("\n==== RESULTS ====")
+    typer.echo(
+        "Max used area converted with inner gameplay (removed soft outliers):"
+        f" {width_mmC_filtered:.2f} x {height_mmC_filtered:.2f} mm"
+    )
+    typer.echo(
+        "Area calculated with most used points near extremes (removed soft outliers):"
+        f" {x_distance_mm:.2f} x {y_distance_mm:.2f} mm"
+    )
 
-    return width_mmC_filtered, height_mmC_filtered, x_min_peak_mm, x_max_peak_mm, y_min_peak_mm, y_max_peak_mm, x_distance_mm, y_distance_mm
 
-# Run program
-duration = int(input("Enter map duration in seconds: "))
-input("Press to start recording")
-data = record_movements(duration)
-analyze_data(data)
-input("Press Enter to exit...")
+def main(
+    screen_width_px: Annotated[
+        int, typer.Option(prompt="Enter your screen width in pixels", min=800)
+    ],
+    screen_height_px: Annotated[
+        int, typer.Option(prompt="Enter your screen height in pixels", min=600)
+    ],
+    tablet_width_mm: Annotated[
+        int,
+        typer.Option(prompt="Enter your full active tablet area width in mm", min=1),
+    ],
+    tablet_height_mm: Annotated[
+        int,
+        typer.Option(prompt="Enter your full active tablet area height in mm", min=1),
+    ],
+    duration: Annotated[
+        int, typer.Option(prompt="Enter map duration in seconds", min=1)
+    ],
+):
+    innergameplay_height_px = int((864 / 1080) * screen_height_px)
+    innergameplay_width_px = int((1152 / 1920) * screen_width_px)
+    typer.confirm("Press Enter to start recording", default=True)
+
+    record_movements(duration)
+    analyze_data(
+        data=data,
+        screen_width_px=screen_width_px,
+        screen_height_px=screen_height_px,
+        tablet_width_mm=tablet_width_mm,
+        tablet_height_mm=tablet_height_mm,
+        innergameplay_width_px=innergameplay_width_px,
+        innergameplay_height_px=innergameplay_height_px,
+    )
+
+    again = typer.confirm("Want to record again?", default=True)
+    if again:
+        return main(
+            screen_width_px,
+            screen_height_px,
+            tablet_width_mm,
+            tablet_height_mm,
+            duration,
+        )
+    typer.echo("Thank you for using the Area Calculator!")
+    raise typer.Exit()
+
+
+if __name__ == "__main__":
+    typer.run(main)
