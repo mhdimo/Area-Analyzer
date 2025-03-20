@@ -5,6 +5,7 @@ from pynput.mouse import Listener
 import typer
 
 SAMPLE_RATE = 0.01
+GRACE_PERIOD = 5
 input_x = np.array([], dtype=np.uint16)
 input_y = np.array([], dtype=np.uint16)
 
@@ -19,6 +20,7 @@ def on_move(x: int, y: int) -> NoReturn:
 def record_movements(duration: int) -> NoReturn:
     """Records cursor movements for the given duration"""
     with Listener(on_move=on_move):
+        time.sleep(GRACE_PERIOD)
         print(f"Recording started for {duration} seconds...")
         # Sampling every 10ms
         start_time = time.perf_counter()
@@ -58,21 +60,19 @@ def analyze_data(
     """Analyzes the movement data and finds dimensions & peak points"""
 
     # Remove soft outliers (0.01 - 99.99 percentiles)
-    x_1, x_99 = np.percentile(input_x, [0.01, 99.99])
-    y_1, y_99 = np.percentile(input_y, [0.01, 99.99])
+    x_1, x_9 = np.percentile(input_x, [0.01, 99.99])
+    y_1, y_9 = np.percentile(input_y, [0.01, 99.99])
 
-    width_px_filtered = x_99 - x_1
-    height_px_filtered = y_99 - y_1
+    width_px_filtered = x_9 - x_1
+    height_px_filtered = y_9 - y_1
 
     # Convert to mm
     width_mmC_filtered = (width_px_filtered * tablet_width_mm) / innergameplay_width_px
-    height_mmC_filtered = (
-        height_px_filtered * tablet_height_mm
-    ) / innergameplay_height_px
+    height_mmC_filtered = (height_px_filtered * tablet_height_mm) / innergameplay_height_px
 
     # Find peak usage near the filtered extremes
-    x_min_peak, x_max_peak = find_peak_near_extremes(input_x, x_1, x_99)
-    y_min_peak, y_max_peak = find_peak_near_extremes(input_y, y_1, y_99)
+    x_min_peak, x_max_peak = find_peak_near_extremes(input_x, x_1, x_9)
+    y_min_peak, y_max_peak = find_peak_near_extremes(input_y, y_1, y_9)
 
     x_distance_px = x_max_peak - x_min_peak
     y_distance_px = y_max_peak - y_min_peak
@@ -80,10 +80,10 @@ def analyze_data(
     y_distance_mm = (y_distance_px * tablet_height_mm) / innergameplay_height_px
 
     typer.echo("\n==== RESULTS ====")
-    typer.echo(
-        "Max used area converted with inner gameplay (removed soft outliers):"
-        f" {width_mmC_filtered:.2f} x {height_mmC_filtered:.2f} mm"
-    )
+    # typer.echo(
+    #     "Max used area (removed soft outliers):"
+    #     f" {width_mmC_filtered:.2f} x {height_mmC_filtered:.2f} mm"
+    # )
     typer.echo(
         "Area calculated with most used points near extremes (removed soft outliers):"
         f" {x_distance_mm:.2f} x {y_distance_mm:.2f} mm"
@@ -106,7 +106,7 @@ def main(
         typer.Option(prompt="Enter your full active tablet area height in mm", min=1),
     ],
     duration: Annotated[
-        int, typer.Option(prompt="Enter map duration in seconds", min=1)
+        int, typer.Option(prompt="Enter map duration in seconds", min=10)
     ],
 ):
     innergameplay_height_px = int((864 / 1080) * screen_height_px)
