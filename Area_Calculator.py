@@ -3,13 +3,17 @@ import json
 import numpy as np
 from pynput.mouse import Listener
 
+# Get user screen resolution
+SCREEN_WIDTH_PX = int(input("Enter your screen width in pixels: "))
+SCREEN_HEIGHT_PX = int(input("Enter your screen height in pixels: "))
+
+# Inner gameplay is proportional to 1152x864 on a 1920x1080 screen
+INNERGAMEPLAY_WIDTH_PX = int((1152 / 1920) * SCREEN_WIDTH_PX)
+INNERGAMEPLAY_HEIGHT_PX = int((864 / 1080) * SCREEN_HEIGHT_PX)
+
 # Get tablet dimensions
-TABLET_WIDTH_MM = int(input("Enter active tablet width in mm: "))
-TABLET_HEIGHT_MM = int(input("Enter active tablet height in mm: "))
-TABLET_WIDTH_PX = 4096
-TABLET_HEIGHT_PX = 2560
-INNERGAMEPLAY_WIDTH_PX = 1152
-INNERGAMEPLAY_HEIGHT_PX = 864
+TABLET_WIDTH_MM = int(input("Enter your full active tablet area width in mm: "))
+TABLET_HEIGHT_MM = int(input("Enter your full active tablet area height in mm: "))
 
 data = []
 
@@ -59,7 +63,7 @@ def analyze_data(data):
     x_values = np.array([point[0] for point in data])
     y_values = np.array([point[1] for point in data])
     
-    # Remove soft outliers (0.001 - 99.99 percentiles)
+    # Remove soft outliers (0.01 - 99.99 percentiles)
     x_1, x_99 = np.percentile(x_values, [0.01, 99.99])
     y_1, y_99 = np.percentile(y_values, [0.01, 99.99])
     
@@ -75,10 +79,10 @@ def analyze_data(data):
     y_min_peak, y_max_peak = find_peak_near_extremes(y_values, y_1, y_99)
 
     # Convert to mm
-    x_min_peak_mm = (x_min_peak * TABLET_WIDTH_MM) / TABLET_WIDTH_PX
-    x_max_peak_mm = (x_max_peak * TABLET_WIDTH_MM) / TABLET_WIDTH_PX
-    y_min_peak_mm = (y_min_peak * TABLET_HEIGHT_MM) / TABLET_HEIGHT_PX
-    y_max_peak_mm = (y_max_peak * TABLET_HEIGHT_MM) / TABLET_HEIGHT_PX
+    x_min_peak_mm = (x_min_peak * TABLET_WIDTH_MM) / SCREEN_WIDTH_PX
+    x_max_peak_mm = (x_max_peak * TABLET_WIDTH_MM) / SCREEN_WIDTH_PX
+    y_min_peak_mm = (y_min_peak * TABLET_HEIGHT_MM) / SCREEN_HEIGHT_PX
+    y_max_peak_mm = (y_max_peak * TABLET_HEIGHT_MM) / SCREEN_HEIGHT_PX
 
     x_distance_px = x_max_peak - x_min_peak
     y_distance_px = y_max_peak - y_min_peak
@@ -93,6 +97,7 @@ def analyze_data(data):
 
 # Run program
 duration = int(input("Enter map duration in seconds: "))
+input("Press to start recording")
 data = record_movements(duration)
 analyze_data(data)
 input("Press Enter to exit...")
