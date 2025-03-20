@@ -5,16 +5,19 @@ from pynput.mouse import Listener
 import typer
 
 SAMPLE_RATE = 0.01
-data: list[tuple[int, int]] = []
+input_x = np.array([], dtype=np.uint16)
+input_y = np.array([], dtype=np.uint16)
 
 
 def on_move(x: int, y: int) -> NoReturn:
-    """Records mouse movements"""
-    data.append((x, y))
+    """Records cursor movements"""
+    global input_x, input_y
+    input_x = np.append(input_x, x)
+    input_y = np.append(input_y, y)
 
 
 def record_movements(duration: int) -> NoReturn:
-    """Records mouse movements for the given duration"""
+    """Records cursor movements for the given duration"""
     with Listener(on_move=on_move):
         print(f"Recording started for {duration} seconds...")
         # Sampling every 10ms
@@ -47,19 +50,16 @@ def find_peak_near_extremes(values, min_val, max_val, threshold_percentage=5):
 
 
 def analyze_data(
-    data: list[tuple[int, int]],
     tablet_width_mm: int,
     tablet_height_mm: int,
     innergameplay_width_px: int,
     innergameplay_height_px: int,
 ):
     """Analyzes the movement data and finds dimensions & peak points"""
-    x_values = np.array([point[0] for point in data], dtype=np.uint16)
-    y_values = np.array([point[1] for point in data], dtype=np.uint16)
 
     # Remove soft outliers (0.01 - 99.99 percentiles)
-    x_1, x_99 = np.percentile(x_values, [0.01, 99.99])
-    y_1, y_99 = np.percentile(y_values, [0.01, 99.99])
+    x_1, x_99 = np.percentile(input_x, [0.01, 99.99])
+    y_1, y_99 = np.percentile(input_y, [0.01, 99.99])
 
     width_px_filtered = x_99 - x_1
     height_px_filtered = y_99 - y_1
@@ -71,8 +71,8 @@ def analyze_data(
     ) / innergameplay_height_px
 
     # Find peak usage near the filtered extremes
-    x_min_peak, x_max_peak = find_peak_near_extremes(x_values, x_1, x_99)
-    y_min_peak, y_max_peak = find_peak_near_extremes(y_values, y_1, y_99)
+    x_min_peak, x_max_peak = find_peak_near_extremes(input_x, x_1, x_99)
+    y_min_peak, y_max_peak = find_peak_near_extremes(input_y, y_1, y_99)
 
     x_distance_px = x_max_peak - x_min_peak
     y_distance_px = y_max_peak - y_min_peak
@@ -115,9 +115,6 @@ def main(
 
     record_movements(duration)
     analyze_data(
-        data=data,
-        screen_width_px=screen_width_px,
-        screen_height_px=screen_height_px,
         tablet_width_mm=tablet_width_mm,
         tablet_height_mm=tablet_height_mm,
         innergameplay_width_px=innergameplay_width_px,
