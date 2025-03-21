@@ -1,26 +1,34 @@
 import time
-from typing import Annotated, NoReturn
+from typing import Annotated
 import numpy as np
 from pynput.mouse import Listener
 import typer
+from rich.progress import track
+from rich import print as rprint
 
 SAMPLE_RATE = 0.01
 GRACE_PERIOD = 5
+
 input_x = np.array([], dtype=np.uint16)
 input_y = np.array([], dtype=np.uint16)
 
 
-def on_move(x: int, y: int) -> NoReturn:
+def on_move(x: int, y: int) -> None:
     """Records cursor movements"""
     global input_x, input_y
     input_x = np.append(input_x, x)
     input_y = np.append(input_y, y)
 
 
-def record_movements(duration: int) -> NoReturn:
+def record_movements(duration: int) -> None:
     """Records cursor movements for the given duration"""
+    for _ in track(
+        range(GRACE_PERIOD * 100),
+        description=f"Waiting for {GRACE_PERIOD} seconds before recording...",
+    ):
+        time.sleep(0.01)
+
     with Listener(on_move=on_move):
-        time.sleep(GRACE_PERIOD)
         print(f"Recording started for {duration} seconds...")
         # Sampling every 10ms
         start_time = time.perf_counter()
@@ -79,15 +87,12 @@ def analyze_data(
     x_distance_mm = (x_distance_px * tablet_width_mm) / innergameplay_width_px
     y_distance_mm = (y_distance_px * tablet_height_mm) / innergameplay_height_px
 
-    typer.echo("\n==== RESULTS ====")
-    # typer.echo(
-    #     "Max used area (removed soft outliers):"
-    #     f" {width_mmC_filtered:.2f} x {height_mmC_filtered:.2f} mm"
-    # )
-    typer.echo(
+    rprint("\n==== RESULTS ====")
+    rprint(
         "Area calculated with most used points near extremes (removed soft outliers):"
-        f" {x_distance_mm:.2f} x {y_distance_mm:.2f} mm"
+        f" [green]{x_distance_mm:.2f} x {y_distance_mm:.2f} mm [/green]"
     )
+    rprint("===================")
 
 
 def main(
@@ -111,7 +116,12 @@ def main(
 ):
     innergameplay_height_px = int((864 / 1080) * screen_height_px)
     innergameplay_width_px = int((1152 / 1920) * screen_width_px)
-    typer.confirm("Press Enter to start recording", default=True)
+    typer.confirm(
+        "Press Enter to start recording",
+        default=True,
+        show_default=False,
+        prompt_suffix=" ",
+    )
 
     record_movements(duration)
     analyze_data(
@@ -121,7 +131,7 @@ def main(
         innergameplay_height_px=innergameplay_height_px,
     )
 
-    again = typer.confirm("Want to record again?", default=True)
+    again = typer.confirm("Want to record again?", default=True, prompt_suffix=" ")
     if again:
         return main(
             screen_width_px,
@@ -130,7 +140,12 @@ def main(
             tablet_height_mm,
             duration,
         )
-    typer.echo("Thank you for using the Area Calculator!")
+    rprint("===================")
+    rprint("Thank you for using the Area Calculator!")
+    rprint(
+        "If you find any issues, feel free to report it on"
+        " [link=https://github.com/denwii/Area_Calculator_Osu]GitHub[/link]!"
+    )
     raise typer.Exit()
 
 
