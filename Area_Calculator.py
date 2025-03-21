@@ -125,11 +125,11 @@ def main(
         int, typer.Option(prompt="Enter your screen height in pixels", min=600)
     ],
     tablet_width_mm: Annotated[
-        int,
+        float,
         typer.Option(prompt="Enter your full active tablet area width in mm", min=1),
     ],
     tablet_height_mm: Annotated[
-        int,
+        float,
         typer.Option(prompt="Enter your full active tablet area height in mm", min=1),
     ],
     duration: Annotated[
