@@ -2,23 +2,31 @@ import time
 from typing import Annotated
 import numpy as np
 from pynput.mouse import Listener
+from pynput.keyboard import Listener as KeyboardListener, Key
 import typer
 from rich.progress import track
 from rich import print as rprint
 
 SAMPLE_RATE = 0.01
-GRACE_PERIOD = 5
 
+
+
+def wait_for_enter():
+    """Waits for the Enter key to be pressed."""
+    print("Press Enter to start recording...")
+
+    def on_press(key):
+        if key == Key.enter:
+            return False  # Stop the listener when Enter is pressed
+
+    with KeyboardListener(on_press=on_press) as listener:
+        listener.join()
 
 def record_movements(
     duration: int,
 ) -> tuple[np.ndarray[np.uint16], np.ndarray[np.uint16]]:
     """Records cursor movements for the given duration"""
-    for _ in track(
-        range(GRACE_PERIOD * 100),
-        description=f"Waiting for {GRACE_PERIOD} seconds before recording...",
-    ):
-        time.sleep(0.01)
+    
 
     x_input = np.array([], dtype=np.uint16)
     y_input = np.array([], dtype=np.uint16)
@@ -138,12 +146,7 @@ def main(
 ):
     innergameplay_height_px = int((864 / 1080) * screen_height_px)
     innergameplay_width_px = int((1152 / 1920) * screen_width_px)
-    typer.confirm(
-        "Press Enter to start recording",
-        default=True,
-        show_default=False,
-        prompt_suffix=" ",
-    )
+    wait_for_enter()
 
     x_input, y_input = record_movements(duration)
     analyze_data(
