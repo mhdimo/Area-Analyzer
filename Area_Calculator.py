@@ -1,7 +1,7 @@
 import time
 from typing import Annotated
 import numpy as np
-from pynput.mouse import Listener
+from pynput.mouse import Listener as MouseListener
 from pynput.keyboard import Listener as KeyboardListener, Key
 import typer
 from rich.progress import track
@@ -37,7 +37,7 @@ def record_movements(
         x_input = np.append(x_input, x)
         y_input = np.append(y_input, y)
 
-    with Listener(on_move=on_move):
+    with MouseListener(on_move=on_move):
         print(f"Recording started for {duration} seconds...")
         # Sampling every 10ms
         start_time = time.perf_counter()
