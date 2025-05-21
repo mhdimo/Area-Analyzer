@@ -52,7 +52,7 @@ A tool for analyzing your tablet area usage in osu! by recording your play area 
 
     ./tablet_analyzer.exe
     ```
-4. Enter your full area values (in mm) when prompted.
+4. Select your tablet and input the prompted monitor resolution.
 5. Locate a long osu! map and input its duration.
 6. Select the "Autopilot" mode.
 7. Before starting, position your pen as you would during normal play, with the cursor centered.
