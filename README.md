@@ -1,14 +1,64 @@
-1) Set the full area in your tablet driver, NO forced proportion, (absolute mode)
-2) Make sure you have all filters disabled and your osu sensitivity is 1x
-4) Open the "Area_Calculator.exe" program.
-5) Enter the full area values (in mm) into the program.
-6) Locate a long map.
-7) Input the duration of the map into the program.
-8) Select the "Autopilot" option in the mode selector.
-9) Before pressing Enter, ensure that you are starting
-from the position you typically use to play,
-with the cursor centered in your usual play area.
-Be careful—the program is recording, so avoid moving
-outside of your playfield range before the program
-finishes.
-10) Play as if you were playing yourself, and tap if you want
+# Tablet Area Analyzer
+
+A tool for analyzing your tablet area usage in osu! by recording your play area during gameplay. This helps you optimize your tablet settings for comfort and performance.
+
+
+
+> [!WARNING]  
+> The area calculation is not accurate currently. The program is still in development and the area calculation will be improved in future releases.
+
+## Features
+
+- Cross-platform support (Windows, macOS, Linux)
+- Records and analyzes your actual play area
+- Simple, interactive command-line interface
+
+## Requirements
+
+- C++17 compatible compiler
+- CMake 3.10 or higher
+- On Linux: X11 development libraries
+- On macOS: CoreFoundation and ApplicationServices frameworks
+
+## Building
+
+1. Clone the repository:
+    ```sh
+    git clone https://github.com/mhdimo/AreaAnalyzer.git
+    cd AreaAnalyzer
+    ```
+
+2. Generate build files with CMake:
+    ```sh
+    cmake ..
+    ```
+
+3. Build the executable:
+    ```sh
+    cmake --build .
+    ```
+
+4. The resulting executable will be named `tablet_analyzer` (or `tablet_analyzer.exe` on Windows in the folder `build/debug`).
+
+## Usage
+
+1. Set the full area in your tablet driver (absolute mode, no forced proportion).
+2. Disable all filters and set osu! sensitivity to 1x.
+3. Run the program:
+    ```sh
+    ./tablet_analyzer
+
+    OR
+
+    ./tablet_analyzer.exe
+    ```
+4. Enter your full area values (in mm) when prompted.
+5. Locate a long osu! map and input its duration.
+6. Select the "Autopilot" mode.
+7. Before starting, position your pen as you would during normal play, with the cursor centered.
+8. Play as usual; the program will record your play area.
+9. Review the results to adjust your tablet area settings.
+
+## License
+
+This project is licensed under the MIT License. See [LICENSE](LICENSE) for details.
