@@ -6,6 +6,10 @@
 #include <vector>
 #include <numeric>
 
+#ifndef M_PI
+#define M_PI 3.14159265358979323846
+#endif
+
 Analyzer::Analyzer(const Tablet& t, int sw, int sh)
     : tablet(t), screen_width(sw), screen_height(sh) {}
 
@@ -49,6 +53,29 @@ static std::pair<int, int> find_peak_near_extremes(
     return {min_peak, max_peak};
 }
 
+float compute_rotation_deg(const std::vector<int>& x, const std::vector<int>& y) {
+    float mean_x = std::accumulate(x.begin(), x.end(), 0.0f) / x.size();
+    float mean_y = std::accumulate(y.begin(), y.end(), 0.0f) / y.size();
+
+    float sxx = 0.0f, sxy = 0.0f;
+    for (size_t i = 0; i < x.size(); ++i) {
+        float dx = x[i] - mean_x;
+        float dy = y[i] - mean_y;
+        sxx += dx * dx;
+        sxy += dx * dy;
+    }
+
+    float angle_rad = std::atan2(2 * sxy, sxx - (std::accumulate(y.begin(), y.end(), 0.0f,
+                      [&](float acc, float yi) {
+                          float dy = yi - mean_y;
+                          return acc + dy * dy;
+                      })));
+    angle_rad *= 0.5f;
+
+    float angle_deg = angle_rad * (180.0f / M_PI);
+    return angle_deg;
+}
+
 void Analyzer::analyze(const std::vector<std::pair<int, int>>& data) const {
     if (data.empty()) return;
 
@@ -84,6 +111,7 @@ void Analyzer::analyze(const std::vector<std::pair<int, int>>& data) const {
 
     std::vector<int> x_filtered = filter_sigma(x, x_mean, x_std);
     std::vector<int> y_filtered = filter_sigma(y, y_mean, y_std);
+    float rotation_deg = compute_rotation_deg(x_filtered, y_filtered);
 
     auto [x_min_it, x_max_it] = std::minmax_element(x_filtered.begin(), x_filtered.end());
     auto [y_min_it, y_max_it] = std::minmax_element(y_filtered.begin(), y_filtered.end());
@@ -105,5 +133,6 @@ void Analyzer::analyze(const std::vector<std::pair<int, int>>& data) const {
 
     std::cout << "\n==== RESULTS ====\n";
     std::cout << "Used Area (filtered and peak-aligned): " << x_mm << " x " << y_mm << " mm\n";
+    std::cout << "Rotation angle (degrees): " << rotation_deg << "°\n";
     std::cout << "=================\n";
 }
