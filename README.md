@@ -13,13 +13,6 @@ A tool for analyzing your tablet area usage in osu! by recording your play area 
 - Records and analyzes your actual play area
 - Simple, interactive command-line interface
 
-## Requirements
-
-- C++17 compatible compiler
-- CMake 3.10 or higher
-- On Linux: X11 development libraries
-- On macOS: CoreFoundation and ApplicationServices frameworks
-
 ## Building
 
 1. Clone the repository:
