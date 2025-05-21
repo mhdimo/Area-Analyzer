@@ -23,6 +23,7 @@ A tool for analyzing your tablet area usage in osu! by recording your play area 
 
 2. Generate build files with CMake:
     ```sh
+    cd ./Build/
     cmake ..
     ```
 
