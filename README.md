@@ -4,14 +4,14 @@ A tool for analyzing your tablet area usage in osu! by recording your play area 
 
 
 
-> [!WARNING]  
-> The area calculation is not accurate currently. The program is still in development and the area calculation will be improved in future releases.
+> [!WARNING]
+> Area calculation is still experimental and may not be precise. Enhancements are planned for future versions.
 
 ## Features
 
-- Cross-platform support (Windows, macOS, Linux)
-- Records and analyzes your actual play area
-- Simple, interactive command-line interface
+- Cross-platform support (Windows, macOS, Linux only under X11)
+- Records and analyzes your actual play area while playing
+- Simple CLI interface
 
 ## Building
 
