@@ -1,29 +1,77 @@
-cmake_minimum_required(VERSION 3.10)
-project(TabletAnalyzer)
+cmake_minimum_required(VERSION 3.20)
+project(TabletAnalyzer LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
 
-# Platform-specific flags
+option(TABLET_ANALYZER_ENABLE_SANITIZERS "Enable AddressSanitizer and UndefinedBehaviorSanitizer" OFF)
+if(TABLET_ANALYZER_ENABLE_SANITIZERS AND (MSVC OR NOT CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU"))
+    message(FATAL_ERROR "Sanitizers require GCC or Clang with the address and undefined runtimes.")
+endif()
+
+function(configure_target target)
+    if(MSVC)
+        target_compile_options(${target} PRIVATE /W4 /permissive-)
+    else()
+        target_compile_options(${target} PRIVATE -Wall -Wextra -Wpedantic)
+    endif()
+    if(TABLET_ANALYZER_ENABLE_SANITIZERS)
+        target_compile_options(${target} PRIVATE -fsanitize=address,undefined -fno-omit-frame-pointer)
+        target_link_options(${target} PRIVATE -fsanitize=address,undefined)
+    endif()
+endfunction()
+
+add_library(tablet_analysis src/Analyzer.cpp src/GraphicTablet.cpp src/TabletFinder.cpp)
+target_include_directories(tablet_analysis PUBLIC include)
+configure_target(tablet_analysis)
+
+find_package(Threads REQUIRED)
+add_library(tablet_recording src/Recorder.cpp)
+target_include_directories(tablet_recording PUBLIC include)
+target_link_libraries(tablet_recording PRIVATE Threads::Threads)
+configure_target(tablet_recording)
+
 if(APPLE)
     find_library(COREFOUNDATION_LIBRARY CoreFoundation)
     find_library(APPLICATIONSERVICES_LIBRARY ApplicationServices)
-    set(EXTRA_LIBS ${COREFOUNDATION_LIBRARY} ${APPLICATIONSERVICES_LIBRARY})
-elseif(UNIX AND NOT APPLE)
-    find_package(X11 REQUIRED)
-    include_directories(${X11_INCLUDE_DIR})
-    set(EXTRA_LIBS ${X11_LIBRARIES})
+    if(NOT COREFOUNDATION_LIBRARY OR NOT APPLICATIONSERVICES_LIBRARY)
+        message(FATAL_ERROR "macOS cursor recording requires CoreFoundation and ApplicationServices.")
+    endif()
+    target_link_libraries(tablet_recording PRIVATE ${COREFOUNDATION_LIBRARY} ${APPLICATIONSERVICES_LIBRARY})
 elseif(WIN32)
-    set(EXTRA_LIBS user32)
+    target_link_libraries(tablet_recording PRIVATE user32)
+elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    find_package(X11 REQUIRED)
+    target_link_libraries(tablet_recording PRIVATE X11::X11)
+else()
+    message(FATAL_ERROR "Supported platforms: Windows, macOS, and Linux with X11.")
 endif()
 
-# Include headers
-include_directories(include)
+add_executable(tablet_analyzer src/main.cpp)
+target_link_libraries(tablet_analyzer PRIVATE tablet_analysis tablet_recording)
+configure_target(tablet_analyzer)
 
-# Source files
-file(GLOB_RECURSE SOURCES CONFIGURE_DEPENDS
-    "src/*.cpp"
-)
+include(CTest)
+if(BUILD_TESTING)
+    add_executable(analyzer_tests tests/AnalyzerTests.cpp)
+    target_link_libraries(analyzer_tests PRIVATE tablet_analysis)
+    configure_target(analyzer_tests)
+    foreach(case IN ITEMS invalid_dimensions invalid_options insufficient_recordings physical_rotation
+            non_widescreen_scaling paired_outliers stationary_dwell jittering_dwell ambiguous_axis_boundary
+            slow_movement clipping_warning uncertain_rotation vertical_principal_axis
+            monitor_origin recommendation_fits_tablet aspect_ratio_option deterministic_recommendation
+            owned_tablet_names catalogue_integrity)
+        add_test(NAME analyzer_${case} COMMAND analyzer_tests ${case})
+    endforeach()
 
-add_executable(tablet_analyzer ${SOURCES})
-target_link_libraries(tablet_analyzer ${EXTRA_LIBS})
+    add_executable(input_tests tests/InputTests.cpp)
+    target_include_directories(input_tests PRIVATE include)
+    configure_target(input_tests)
+    add_test(NAME cli_input COMMAND input_tests)
+
+    add_executable(recorder_tests tests/RecorderTests.cpp)
+    target_link_libraries(recorder_tests PRIVATE tablet_recording)
+    configure_target(recorder_tests)
+    add_test(NAME recorder_options COMMAND recorder_tests)
+endif()

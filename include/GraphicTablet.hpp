@@ -1,17 +1,18 @@
 #pragma once
+#include <string>
 #include <string_view>
 
 class Tablet {
     private:
-        std::string_view brand;
-        std::string_view model;
-        float width_mm;
-        float height_mm;
+        std::string brand;
+        std::string model;
+        double width_mm;
+        double height_mm;
     public:
-        Tablet(std::string_view brand, std::string_view model, float width, float height);
+        Tablet(std::string_view brand, std::string_view model, double width, double height);
 
         std::string_view getBrand() const;
         std::string_view getModel() const;
-        float getWidth() const;
-        float getHeight() const;
+        double getWidth() const;
+        double getHeight() const;
 };

@@ -4,10 +4,10 @@
 
 class Recorder {
 public:
-    Recorder(int duration);
+    explicit Recorder(int duration, int start_delay = 5);
     std::vector<std::pair<int, int>> record() const;
 
 private:
     int duration_sec;
-    std::pair<int, int> getCursorPosition() const;
+    int start_delay_sec;
 };
